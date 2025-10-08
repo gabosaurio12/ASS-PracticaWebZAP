@@ -8,24 +8,27 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+const helmet = require('helmet');
+app.use(helmet());
 
-// Vulnerabilidad inyección SQL
-app.get('/users', (req, res) => {
+// Ruta segura con consultas parametrizadas
+app.get('/users-safe', (req, res) => {
     const name = req.query.name || '';
-    const sql = `SELECT id, name, email FROM users WHERE name LIKE '%${name}%'`;
-    db.all(sql, (err, rows) => {
+    const sql = "SELECT id, name, email FROM users WHERE name LIKE ?";
+    db.all(sql, [`%${name}%`], (err, rows) => {
         if (err) return res.status(500).send('Error DB');
         res.render('users', {rows, q:name });
     });
 });
 
-// XSS reflejado
+// viws/echo.ejs (usa <%? msg %>)
 app.get('/echo', (req, res) => {
     const msg = req.query.msg || ' ';
-    res.send(`<h1>Echo</h1><p>${msg}</p>`); // VULNERABLE
+    res.render('echo', { msg });
 });
 
 app.get('/', (req, res) => res.render('index'));
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`App en http://localhost:%{port}`));
+
